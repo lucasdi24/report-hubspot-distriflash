@@ -1,5 +1,3 @@
-export const config = { api: { bodyParser: true } };
-
 export default async function handler(req, res) {
   const slugParts = Array.isArray(req.query.slug)
     ? req.query.slug
@@ -21,8 +19,17 @@ export default async function handler(req, res) {
 
   const hasBody = req.method !== "GET" && req.method !== "HEAD";
   let body;
-  if (hasBody && req.body != null) {
-    body = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+  if (hasBody) {
+    if (req.body != null) {
+      body = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+    } else {
+      // Vercel may not parse body automatically — read from stream
+      body = await new Promise((resolve) => {
+        let data = "";
+        req.on("data", (chunk) => { data += chunk; });
+        req.on("end", () => resolve(data || undefined));
+      });
+    }
   }
 
   const hsRes = await fetch(url, { method: req.method, headers, body });
