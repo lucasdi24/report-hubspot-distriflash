@@ -1,17 +1,9 @@
 export default async function handler(req, res) {
-  const slugParts = Array.isArray(req.query.slug)
-    ? req.query.slug
-    : [req.query.slug ?? ""];
-
-  const hsPath = "/" + slugParts.join("/");
-
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(req.query)) {
-    if (key === "slug") continue;
-    params.set(key, String(value));
-  }
-  const qs = params.toString();
-  const url = `https://api.hubapi.com${hsPath}${qs ? `?${qs}` : ""}`;
+  // req.url = "/api/hs/crm/v3/objects/deals/search?foo=bar"
+  // In non-Next.js Vercel runtimes req.query.slug is not parsed automatically
+  const [pathname, queryString] = (req.url ?? "").split("?");
+  const hsPath = pathname.replace(/^\/api\/hs/, "") || "/";
+  const url = `https://api.hubapi.com${hsPath}${queryString ? `?${queryString}` : ""}`;
 
   const headers = { "Content-Type": "application/json" };
   const auth = req.headers["authorization"];
@@ -23,7 +15,6 @@ export default async function handler(req, res) {
     if (req.body != null) {
       body = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
     } else {
-      // Vercel may not parse body automatically — read from stream
       body = await new Promise((resolve) => {
         let data = "";
         req.on("data", (chunk) => { data += chunk; });
