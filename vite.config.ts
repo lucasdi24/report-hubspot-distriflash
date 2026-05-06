@@ -6,10 +6,10 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
-      "/api/hs": {
+      "/api": {
         target: "https://api.hubapi.com",
         changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/api\/hs/, ""),
+        rewrite: (p) => p.replace(/^\/api/, ""),
         secure: true,
       },
     },

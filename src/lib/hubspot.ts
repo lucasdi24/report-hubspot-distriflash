@@ -1,6 +1,4 @@
-// En dev, Vite hace proxy de /api/hs/* → https://api.hubapi.com/*
-// En prod, la Vercel serverless function api/hs/[...slug].ts hace lo mismo
-const BASE = "/api/hs";
+const BASE = "/api";
 
 export interface AccountInfo {
   portalId: number;

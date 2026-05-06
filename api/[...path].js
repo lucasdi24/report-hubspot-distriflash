@@ -1,8 +1,7 @@
 export default async function handler(req, res) {
-  // req.url = "/api/hs/crm/v3/objects/deals/search?foo=bar"
-  // In non-Next.js Vercel runtimes req.query.slug is not parsed automatically
   const [pathname, queryString] = (req.url ?? "").split("?");
-  const hsPath = pathname.replace(/^\/api\/hs/, "") || "/";
+  // Strip /api prefix (Vercel may or may not include it in req.url)
+  const hsPath = pathname.replace(/^\/api/, "") || "/";
   const url = `https://api.hubapi.com${hsPath}${queryString ? `?${queryString}` : ""}`;
 
   const headers = { "Content-Type": "application/json" };
