@@ -1,4 +1,4 @@
-const BASE = "/api";
+const BASE = "/api/proxy";
 
 export interface AccountInfo {
   portalId: number;
@@ -55,11 +55,12 @@ export interface HSOwner {
 }
 
 async function hs<T>(token: string, path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(BASE, {
     ...init,
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
+      "x-hs-path": path,
       ...(init?.headers ?? {}),
     },
   });

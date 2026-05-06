@@ -6,11 +6,18 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
-      "/api": {
+      "/api/proxy": {
         target: "https://api.hubapi.com",
         changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/api/, ""),
         secure: true,
+        configure: (proxy) => {
+          proxy.on("proxyReq", (proxyReq, req) => {
+            const hsPath = req.headers["x-hs-path"];
+            if (typeof hsPath === "string") {
+              proxyReq.path = hsPath;
+            }
+          });
+        },
       },
     },
   },

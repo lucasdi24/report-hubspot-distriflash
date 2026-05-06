@@ -1,9 +1,6 @@
 export default async function handler(req, res) {
-  let pathAndQuery = req.url || "/";
-  if (pathAndQuery.startsWith("/api/")) pathAndQuery = pathAndQuery.slice(4);
-  else if (pathAndQuery === "/api") pathAndQuery = "/";
-
-  const target = `https://api.hubapi.com${pathAndQuery}`;
+  const hsPath = req.headers["x-hs-path"] || "/";
+  const target = `https://api.hubapi.com${hsPath}`;
 
   let body;
   if (req.method !== "GET" && req.method !== "HEAD") {
