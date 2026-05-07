@@ -232,15 +232,15 @@ function KpiCard({
   color: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-      <div className="flex items-start justify-between mb-4">
-        <p className="text-sm text-gray-500">{label}</p>
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${color}18` }}>
-          <Icon className="w-4 h-4" style={{ color }} />
+    <div className="bg-white rounded-2xl border border-gray-100 p-7 shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between mb-5">
+        <p className="text-sm text-gray-500 font-medium">{label}</p>
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${color}18` }}>
+          <Icon className="w-5 h-5" style={{ color }} />
         </div>
       </div>
-      <p className="text-2xl font-semibold text-gray-900">{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      <p className="text-3xl font-bold text-gray-900 tracking-tight">{value}</p>
+      {sub && <p className="text-xs text-gray-400 mt-2">{sub}</p>}
     </div>
   );
 }
@@ -420,16 +420,16 @@ function Dashboard({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Top bar */}
-      <div className="bg-white border-b border-gray-100 px-6 py-4 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+      <div className="bg-white border-b border-gray-100 px-6 lg:px-10 py-4 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-[1500px] mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#FF7A59" }}>
-              <TrendingUp className="w-4 h-4 text-white" />
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm" style={{ background: "#FF7A59" }}>
+              <TrendingUp className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-900 leading-tight">HubSpot Reports</p>
+              <p className="text-base font-semibold text-gray-900 leading-tight">HubSpot Reports</p>
               {data && (
-                <p className="text-xs text-gray-400 leading-tight">
+                <p className="text-xs text-gray-400 leading-tight mt-0.5">
                   {data.account.companyName || `Portal ${data.account.portalId}`}
                 </p>
               )}
@@ -441,7 +441,7 @@ function Dashboard({
             <div className="relative">
               <button
                 onClick={() => setShowRangeMenu((v) => !v)}
-                className="flex items-center gap-2 text-sm border border-gray-200 rounded-xl px-4 py-2 bg-white hover:bg-gray-50 transition font-medium text-gray-700"
+                className="flex items-center gap-2 text-sm border border-gray-200 rounded-xl px-4 py-2.5 bg-white hover:bg-gray-50 transition font-medium text-gray-700"
               >
                 {RANGE_LABELS[range]}
                 <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
@@ -465,7 +465,7 @@ function Dashboard({
             <button
               onClick={load}
               disabled={loading}
-              className="p-2 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition disabled:opacity-50"
+              className="p-2.5 rounded-xl border border-gray-200 text-gray-500 hover:bg-gray-50 transition disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
             </button>
@@ -474,7 +474,7 @@ function Dashboard({
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+      <div className="max-w-[1500px] mx-auto px-6 lg:px-10 py-10 space-y-10">
         {/* Error */}
         {error && (
           <div className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-100 px-4 py-3">
@@ -485,11 +485,11 @@ function Dashboard({
 
         {/* Loading skeleton */}
         {loading && !data && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 p-6 h-28 animate-pulse">
-                <div className="h-3 bg-gray-100 rounded w-1/2 mb-4" />
-                <div className="h-7 bg-gray-100 rounded w-3/4" />
+              <div key={i} className="bg-white rounded-2xl border border-gray-100 p-7 h-32 animate-pulse">
+                <div className="h-3 bg-gray-100 rounded w-1/2 mb-5" />
+                <div className="h-8 bg-gray-100 rounded w-3/4" />
               </div>
             ))}
           </div>
@@ -498,7 +498,7 @@ function Dashboard({
         {data && (
           <>
             {/* KPI cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
               <KpiCard
                 label="Deals creados"
                 value={fmtNum(totalDeals)}
@@ -532,9 +532,9 @@ function Dashboard({
             {/* Charts row */}
             <div className="grid lg:grid-cols-5 gap-6">
               {/* Pipeline by stage — bar chart */}
-              <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <h3 className="text-sm font-medium text-gray-900 mb-1">Pipeline por etapa</h3>
-                <p className="text-xs text-gray-400 mb-5">Valor acumulado de deals abiertos</p>
+              <div className="lg:col-span-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-7 hover:shadow-md transition-shadow">
+                <h3 className="text-base font-semibold text-gray-900">Pipeline por etapa</h3>
+                <p className="text-xs text-gray-400 mt-1 mb-6">Valor acumulado de deals abiertos</p>
                 {pipelineChartData.length === 0 ? (
                   <div className="h-52 flex items-center justify-center text-sm text-gray-400">
                     Sin deals abiertos en el período
@@ -569,9 +569,9 @@ function Dashboard({
               </div>
 
               {/* Contacts by source — pie */}
-              <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                <h3 className="text-sm font-medium text-gray-900 mb-1">Contactos por fuente</h3>
-                <p className="text-xs text-gray-400 mb-2">Distribución por origen</p>
+              <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-7 hover:shadow-md transition-shadow">
+                <h3 className="text-base font-semibold text-gray-900">Contactos por fuente</h3>
+                <p className="text-xs text-gray-400 mt-1 mb-3">Distribución por origen</p>
                 {sourcesData.length === 0 ? (
                   <div className="h-52 flex items-center justify-center text-sm text-gray-400">
                     Sin contactos en el período
@@ -609,16 +609,23 @@ function Dashboard({
 
             {/* Pipeline por propietario — un card por owner */}
             <div>
-              <div className="mb-4">
-                <h3 className="text-sm font-medium text-gray-900">Pipeline por propietario</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Deals abiertos por etapa para cada miembro del equipo</p>
+              <div className="mb-5 flex items-end justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900">Pipeline por propietario</h3>
+                  <p className="text-xs text-gray-400 mt-1">Deals abiertos por etapa para cada miembro del equipo</p>
+                </div>
+                {pipelineByOwner.length > 0 && (
+                  <span className="text-xs text-gray-400">
+                    {pipelineByOwner.length} propietarios · {pipelineByOwner.reduce((s, o) => s + o.total, 0)} deals abiertos
+                  </span>
+                )}
               </div>
               {pipelineByOwner.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm h-32 flex items-center justify-center text-sm text-gray-400">
                   Sin deals abiertos en el período
                 </div>
               ) : (
-                <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
                   {pipelineByOwner.map(({ owner, total, stageData }, idx) => {
                     const ownerColor = [
                       "#FF7A59", "#00BDA5", "#516F90", "#F5C26B", "#6C4298", "#99ACC2",
@@ -629,20 +636,20 @@ function Dashboard({
                     ];
                     const maxStageCount = Math.max(...stageData.map((s) => s.cantidad), 1);
                     return (
-                      <div key={owner} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                      <div key={owner} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                         {/* Header */}
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
                             <div
-                              className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-semibold text-sm shrink-0"
+                              className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold text-sm shrink-0"
                               style={{ background: ownerColor }}
                             >
                               {owner.charAt(0).toUpperCase()}
                             </div>
-                            <span className="font-medium text-gray-900">{owner}</span>
+                            <span className="font-semibold text-gray-900 truncate">{owner}</span>
                           </div>
                           <span
-                            className="text-xs font-semibold px-3 py-1 rounded-full text-white"
+                            className="text-xs font-semibold px-3 py-1.5 rounded-full text-white shrink-0 ml-3"
                             style={{ background: ownerColor }}
                           >
                             {total} deals
@@ -650,20 +657,20 @@ function Dashboard({
                         </div>
 
                         {/* Stage rows */}
-                        <div className="divide-y divide-gray-50">
+                        <div className="divide-y divide-gray-50 py-1">
                           {stageData.map((s, i) => {
                             const pct = Math.round((s.cantidad / maxStageCount) * 100);
                             return (
-                              <div key={s.stage} className="flex items-center gap-4 px-6 py-3">
+                              <div key={s.stage} className="flex items-center gap-4 px-6 py-3.5">
                                 {/* Stage name */}
-                                <span className="text-sm text-gray-600 w-44 shrink-0 truncate">{s.stage}</span>
+                                <span className="text-sm text-gray-600 w-40 shrink-0 truncate">{s.stage}</span>
                                 {/* Bar */}
-                                <div className="flex-1 h-6 bg-gray-50 rounded-lg overflow-hidden">
+                                <div className="flex-1 h-7 bg-gray-50 rounded-lg overflow-hidden">
                                   <div
                                     className="h-full rounded-lg flex items-center justify-end pr-2 transition-all duration-500"
                                     style={{
                                       width: `${pct}%`,
-                                      minWidth: 28,
+                                      minWidth: 32,
                                       background: segColors[i % segColors.length],
                                     }}
                                   >
@@ -671,7 +678,7 @@ function Dashboard({
                                   </div>
                                 </div>
                                 {/* % of owner total */}
-                                <span className="text-xs text-gray-400 w-10 text-right shrink-0">
+                                <span className="text-xs text-gray-400 w-10 text-right shrink-0 font-medium">
                                   {Math.round((s.cantidad / total) * 100)}%
                                 </span>
                               </div>
@@ -687,25 +694,25 @@ function Dashboard({
 
             {/* Recent deals table */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-6 py-5 border-b border-gray-50">
-                <h3 className="text-sm font-medium text-gray-900">Deals recientes</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Últimos 10 deals creados en el período</p>
+              <div className="px-7 py-5 border-b border-gray-50">
+                <h3 className="text-base font-semibold text-gray-900">Deals recientes</h3>
+                <p className="text-xs text-gray-400 mt-1">Últimos 10 deals creados en el período</p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-50">
-                      <th className="text-left text-xs text-gray-400 font-medium px-6 py-3">Nombre</th>
-                      <th className="text-left text-xs text-gray-400 font-medium px-6 py-3">Etapa</th>
-                      <th className="text-right text-xs text-gray-400 font-medium px-6 py-3">Valor</th>
-                      <th className="text-left text-xs text-gray-400 font-medium px-6 py-3">Creado</th>
-                      <th className="text-left text-xs text-gray-400 font-medium px-6 py-3">Cierre</th>
+                  <thead className="bg-gray-50/50">
+                    <tr>
+                      <th className="text-left text-xs text-gray-500 font-semibold uppercase tracking-wider px-7 py-3.5">Nombre</th>
+                      <th className="text-left text-xs text-gray-500 font-semibold uppercase tracking-wider px-7 py-3.5">Etapa</th>
+                      <th className="text-right text-xs text-gray-500 font-semibold uppercase tracking-wider px-7 py-3.5">Valor</th>
+                      <th className="text-left text-xs text-gray-500 font-semibold uppercase tracking-wider px-7 py-3.5">Creado</th>
+                      <th className="text-left text-xs text-gray-500 font-semibold uppercase tracking-wider px-7 py-3.5">Cierre</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
                     {recentDeals.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="text-center text-gray-400 py-8 text-sm">
+                        <td colSpan={5} className="text-center text-gray-400 py-10 text-sm">
                           Sin deals en el período seleccionado
                         </td>
                       </tr>
@@ -717,12 +724,12 @@ function Dashboard({
                         const isClosed = stage?.isClosed && !isWon;
                         return (
                           <tr key={deal.id} className="hover:bg-gray-50/50 transition">
-                            <td className="px-6 py-3.5 font-medium text-gray-800 max-w-xs truncate">
+                            <td className="px-7 py-4 font-medium text-gray-800 max-w-xs truncate">
                               {deal.properties.dealname ?? "Sin nombre"}
                             </td>
-                            <td className="px-6 py-3.5">
+                            <td className="px-7 py-4">
                               <span
-                                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
                                 style={{
                                   background: isWon ? "#DCFCE7" : isClosed ? "#FEE2E2" : "#FFF7ED",
                                   color: isWon ? "#16A34A" : isClosed ? "#DC2626" : "#C2410C",
@@ -731,15 +738,15 @@ function Dashboard({
                                 {stage?.label ?? deal.properties.dealstage ?? "Desconocida"}
                               </span>
                             </td>
-                            <td className="px-6 py-3.5 text-right font-medium text-gray-800">
+                            <td className="px-7 py-4 text-right font-semibold text-gray-800 tabular-nums">
                               {amount > 0 ? fmtCurrency(amount, currency) : "—"}
                             </td>
-                            <td className="px-6 py-3.5 text-gray-500">
+                            <td className="px-7 py-4 text-gray-500 whitespace-nowrap">
                               {deal.properties.createdate
                                 ? format(new Date(deal.properties.createdate), "d MMM yyyy", { locale: es })
                                 : "—"}
                             </td>
-                            <td className="px-6 py-3.5 text-gray-500">
+                            <td className="px-7 py-4 text-gray-500 whitespace-nowrap">
                               {deal.properties.closedate
                                 ? format(new Date(deal.properties.closedate), "d MMM yyyy", { locale: es })
                                 : "—"}
