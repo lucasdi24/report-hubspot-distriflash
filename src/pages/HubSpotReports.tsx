@@ -58,11 +58,13 @@ function fmtNum(val: number) {
   return new Intl.NumberFormat("es-AR").format(val);
 }
 
-type Range = "30d" | "90d" | "month" | "quarter" | "year";
+type Range = "7d" | "30d" | "90d" | "month" | "quarter" | "year" | "custom";
 
-function getRangeDates(range: Range): { from: Date; to: Date } {
+function getRangeDates(range: Range, customFrom?: string, customTo?: string): { from: Date; to: Date } {
   const to = endOfDay(new Date());
   switch (range) {
+    case "7d":
+      return { from: subDays(to, 7), to };
     case "30d":
       return { from: subDays(to, 30), to };
     case "90d":
@@ -73,15 +75,24 @@ function getRangeDates(range: Range): { from: Date; to: Date } {
       return { from: startOfQuarter(to), to };
     case "year":
       return { from: startOfYear(to), to };
+    case "custom": {
+      const from = customFrom ? new Date(customFrom + "T00:00:00") : subDays(to, 30);
+      const toEnd = customTo ? endOfDay(new Date(customTo + "T00:00:00")) : to;
+      return { from, to: toEnd };
+    }
   }
 }
 
+const PRESET_RANGES: Exclude<Range, "custom">[] = ["7d", "30d", "90d", "month", "quarter", "year"];
+
 const RANGE_LABELS: Record<Range, string> = {
+  "7d": "Últimos 7 días",
   "30d": "Últimos 30 días",
   "90d": "Últimos 90 días",
   month: "Este mes",
   quarter: "Este trimestre",
   year: "Este año",
+  custom: "Personalizado",
 };
 
 const PIE_COLORS = [
@@ -264,6 +275,10 @@ function Dashboard({
 }) {
   const [range, setRange] = useState<Range>("30d");
   const [showRangeMenu, setShowRangeMenu] = useState(false);
+  const [customFrom, setCustomFrom] = useState<string>(() =>
+    format(subDays(new Date(), 30), "yyyy-MM-dd")
+  );
+  const [customTo, setCustomTo] = useState<string>(() => format(new Date(), "yyyy-MM-dd"));
   const [data, setData] = useState<DashData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -272,7 +287,7 @@ function Dashboard({
     setLoading(true);
     setError(null);
     try {
-      const { from, to } = getRangeDates(range);
+      const { from, to } = getRangeDates(range, customFrom, customTo);
       // Primero los 3 livianos (un solo request c/u) en paralelo
       const [account, pipelines, owners] = await Promise.all([
         fetchAccountInfo(token),
@@ -295,7 +310,7 @@ function Dashboard({
     } finally {
       setLoading(false);
     }
-  }, [token, range]);
+  }, [token, range, customFrom, customTo]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -445,20 +460,57 @@ function Dashboard({
                 onClick={() => setShowRangeMenu((v) => !v)}
                 className="flex items-center gap-2 text-sm border border-gray-200 rounded-xl px-4 py-2.5 bg-white hover:bg-gray-50 transition font-medium text-gray-700"
               >
-                {RANGE_LABELS[range]}
+                {range === "custom"
+                  ? `${format(new Date(customFrom + "T00:00:00"), "d MMM", { locale: es })} – ${format(new Date(customTo + "T00:00:00"), "d MMM yyyy", { locale: es })}`
+                  : RANGE_LABELS[range]}
                 <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
               </button>
               {showRangeMenu && (
-                <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-100 rounded-xl shadow-lg py-1 z-20">
-                  {(Object.keys(RANGE_LABELS) as Range[]).map((r) => (
+                <div className="absolute right-0 mt-1 w-72 bg-white border border-gray-100 rounded-xl shadow-lg py-1 z-20">
+                  {PRESET_RANGES.map((r) => (
                     <button
                       key={r}
                       onClick={() => { setRange(r); setShowRangeMenu(false); }}
-                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition ${r === range ? "font-medium text-gray-900" : "text-gray-600"}`}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition ${r === range ? "font-medium text-gray-900 bg-orange-50/40" : "text-gray-600"}`}
                     >
                       {RANGE_LABELS[r]}
                     </button>
                   ))}
+                  <div className="border-t border-gray-100 my-1" />
+                  <div className="px-4 py-3">
+                    <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wider">Personalizado</p>
+                    <div className="flex flex-col gap-2">
+                      <label className="flex items-center justify-between gap-2 text-xs text-gray-600">
+                        <span>Desde</span>
+                        <input
+                          type="date"
+                          value={customFrom}
+                          max={customTo || undefined}
+                          onChange={(e) => setCustomFrom(e.target.value)}
+                          className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-gray-400"
+                        />
+                      </label>
+                      <label className="flex items-center justify-between gap-2 text-xs text-gray-600">
+                        <span>Hasta</span>
+                        <input
+                          type="date"
+                          value={customTo}
+                          min={customFrom || undefined}
+                          max={format(new Date(), "yyyy-MM-dd")}
+                          onChange={(e) => setCustomTo(e.target.value)}
+                          className="text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-gray-400"
+                        />
+                      </label>
+                      <button
+                        onClick={() => { setRange("custom"); setShowRangeMenu(false); }}
+                        disabled={!customFrom || !customTo || customFrom > customTo}
+                        className="text-sm text-white rounded-lg py-2 mt-1 font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 transition"
+                        style={{ background: "#FF7A59" }}
+                      >
+                        Aplicar
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
