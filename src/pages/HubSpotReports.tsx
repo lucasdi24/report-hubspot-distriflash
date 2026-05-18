@@ -427,6 +427,43 @@ function Dashboard({
     .filter((o) => o.total > 0)
     .sort((a, b) => b.total - a.total);
 
+  // Actividad por propietario — agrupa todos los KPIs de cada owner en una sola fila
+  const ownerIdsWithActivity = new Set<string>();
+  deals.forEach((d) => { if (d.properties.hubspot_owner_id) ownerIdsWithActivity.add(d.properties.hubspot_owner_id); });
+  contacts.forEach((c) => { if (c.properties.hubspot_owner_id) ownerIdsWithActivity.add(c.properties.hubspot_owner_id); });
+
+  const ownerActivity = Array.from(ownerIdsWithActivity)
+    .map((ownerId) => {
+      const name = ownerMap.get(ownerId) ?? `ID ${ownerId}`;
+      const ownerDeals = deals.filter((d) => d.properties.hubspot_owner_id === ownerId);
+      const ownerContacts = contacts.filter((c) => c.properties.hubspot_owner_id === ownerId);
+
+      const won = ownerDeals.filter((d) => stageMap.get(d.properties.dealstage ?? "")?.isWon);
+      const lost = ownerDeals.filter((d) => {
+        const st = stageMap.get(d.properties.dealstage ?? "");
+        return st?.isClosed && !st?.isWon;
+      });
+      const open = ownerDeals.filter((d) => !stageMap.get(d.properties.dealstage ?? "")?.isClosed);
+
+      const pipelineValue = open.reduce((s, d) => s + parseFloat(d.properties.amount ?? "0"), 0);
+      const wonRevenue = won.reduce((s, d) => s + parseFloat(d.properties.amount ?? "0"), 0);
+      const closedTotal = won.length + lost.length;
+      const winRate = closedTotal > 0 ? Math.round((won.length / closedTotal) * 100) : null;
+
+      return {
+        id: ownerId,
+        name,
+        totalDeals: ownerDeals.length,
+        openDeals: open.length,
+        pipelineValue,
+        wonCount: won.length,
+        wonRevenue,
+        contacts: ownerContacts.length,
+        winRate,
+      };
+    })
+    .sort((a, b) => b.pipelineValue - a.pipelineValue || b.totalDeals - a.totalDeals);
+
   // Recent deals table (top 10 by createdate)
   const recentDeals = [...deals]
     .sort((a, b) => new Date(b.properties.createdate ?? 0).getTime() - new Date(a.properties.createdate ?? 0).getTime())
@@ -744,6 +781,100 @@ function Dashboard({
                   })}
                 </div>
               )}
+            </div>
+
+            {/* Actividad por propietario */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-7 py-5 border-b border-gray-50 flex items-end justify-between gap-4">
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900">Actividad por propietario</h3>
+                  <p className="text-xs text-gray-400 mt-1">Resumen completo de deals y contactos por miembro del equipo</p>
+                </div>
+                {ownerActivity.length > 0 && (
+                  <span className="text-xs text-gray-400 shrink-0">
+                    {ownerActivity.length} {ownerActivity.length === 1 ? "propietario" : "propietarios"}
+                  </span>
+                )}
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50/50">
+                    <tr>
+                      <th className="text-left text-xs text-gray-500 font-semibold uppercase tracking-wider px-7 py-3.5">Propietario</th>
+                      <th className="text-right text-xs text-gray-500 font-semibold uppercase tracking-wider px-4 py-3.5">Deals</th>
+                      <th className="text-right text-xs text-gray-500 font-semibold uppercase tracking-wider px-4 py-3.5">Abiertos</th>
+                      <th className="text-right text-xs text-gray-500 font-semibold uppercase tracking-wider px-4 py-3.5">Pipeline</th>
+                      <th className="text-right text-xs text-gray-500 font-semibold uppercase tracking-wider px-4 py-3.5">Ganados</th>
+                      <th className="text-right text-xs text-gray-500 font-semibold uppercase tracking-wider px-4 py-3.5">Revenue</th>
+                      <th className="text-right text-xs text-gray-500 font-semibold uppercase tracking-wider px-4 py-3.5">Contactos</th>
+                      <th className="text-right text-xs text-gray-500 font-semibold uppercase tracking-wider px-7 py-3.5">Win rate</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {ownerActivity.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="text-center text-gray-400 py-10 text-sm">
+                          Sin actividad en el período seleccionado
+                        </td>
+                      </tr>
+                    ) : (
+                      ownerActivity.map((o, idx) => {
+                        const ownerColor = ["#FF7A59", "#00BDA5", "#516F90", "#F5C26B", "#6C4298", "#99ACC2"][idx % 6];
+                        return (
+                          <tr key={o.id} className="hover:bg-gray-50/50 transition">
+                            <td className="px-7 py-4">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div
+                                  className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-semibold text-sm shrink-0"
+                                  style={{ background: ownerColor }}
+                                >
+                                  {o.name.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="font-medium text-gray-900 truncate">{o.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 text-right font-semibold text-gray-800 tabular-nums">
+                              {fmtNum(o.totalDeals)}
+                            </td>
+                            <td className="px-4 py-4 text-right text-gray-600 tabular-nums">
+                              {fmtNum(o.openDeals)}
+                            </td>
+                            <td className="px-4 py-4 text-right font-medium text-gray-800 tabular-nums whitespace-nowrap">
+                              {o.pipelineValue > 0 ? fmtCurrency(o.pipelineValue, currency) : "—"}
+                            </td>
+                            <td className="px-4 py-4 text-right text-gray-600 tabular-nums">
+                              {o.wonCount > 0 ? fmtNum(o.wonCount) : "—"}
+                            </td>
+                            <td className="px-4 py-4 text-right font-medium text-gray-800 tabular-nums whitespace-nowrap">
+                              {o.wonRevenue > 0 ? fmtCurrency(o.wonRevenue, currency) : "—"}
+                            </td>
+                            <td className="px-4 py-4 text-right text-gray-600 tabular-nums">
+                              {fmtNum(o.contacts)}
+                            </td>
+                            <td className="px-7 py-4 text-right">
+                              {o.winRate === null ? (
+                                <span className="text-gray-300">—</span>
+                              ) : (
+                                <span
+                                  className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold tabular-nums"
+                                  style={{
+                                    background:
+                                      o.winRate >= 50 ? "#DCFCE7" : o.winRate >= 25 ? "#FEF3C7" : "#FEE2E2",
+                                    color:
+                                      o.winRate >= 50 ? "#16A34A" : o.winRate >= 25 ? "#B45309" : "#DC2626",
+                                  }}
+                                >
+                                  {o.winRate}%
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Recent deals table */}
