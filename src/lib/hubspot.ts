@@ -54,21 +54,32 @@ export interface HSOwner {
   email: string;
 }
 
-async function hs<T>(token: string, path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(BASE, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "x-hs-path": path,
-      ...(init?.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function hs<T>(token: string, path: string, init?: RequestInit, retries = 4): Promise<T> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const res = await fetch(BASE, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        "x-hs-path": path,
+        ...(init?.headers ?? {}),
+      },
+    });
+    if (res.ok) return res.json() as Promise<T>;
+
+    // Rate-limit: HubSpot devuelve 429 con header Retry-After
+    if (res.status === 429 && attempt < retries) {
+      const retryAfter = parseInt(res.headers.get("retry-after") || "1", 10);
+      await sleep(Math.max(retryAfter * 1000, 250 * Math.pow(2, attempt)));
+      continue;
+    }
+
     const body = await res.json().catch(() => ({}));
     throw new Error(body.message ?? `HTTP ${res.status} — ${path}`);
   }
-  return res.json() as Promise<T>;
+  throw new Error(`Rate-limit excedido tras ${retries} reintentos: ${path}`);
 }
 
 export async function fetchAccountInfo(token: string): Promise<AccountInfo> {
@@ -107,6 +118,9 @@ async function searchAll<T>(
 
     results.push(...data.results);
     after = data.paging?.next?.after;
+
+    // Throttle ~7 req/s para no chocar contra el "secondly limit" (10/s) de HubSpot
+    if (after && results.length < maxRecords) await sleep(150);
   } while (after && results.length < maxRecords);
 
   return results;

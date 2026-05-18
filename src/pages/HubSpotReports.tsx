@@ -273,13 +273,15 @@ function Dashboard({
     setError(null);
     try {
       const { from, to } = getRangeDates(range);
-      const [account, pipelines, owners, deals, contacts] = await Promise.all([
+      // Primero los 3 livianos (un solo request c/u) en paralelo
+      const [account, pipelines, owners] = await Promise.all([
         fetchAccountInfo(token),
         fetchPipelines(token),
         fetchOwners(token),
-        fetchDeals(token, from, to),
-        fetchContacts(token, from, to),
       ]);
+      // Luego los dos paginados secuencial para no chocar contra el secondly limit
+      const deals = await fetchDeals(token, from, to);
+      const contacts = await fetchContacts(token, from, to);
       setData({ account, pipelines, owners, deals, contacts });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Error al cargar datos";
