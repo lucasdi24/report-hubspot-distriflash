@@ -34,12 +34,16 @@ import {
   fetchDeals,
   fetchContacts,
   fetchOwners,
+  fetchAllEngagements,
   sourceLabel,
+  ENGAGEMENT_LABELS,
   type AccountInfo,
   type Pipeline,
   type HSDeal,
   type HSContact,
   type HSOwner,
+  type EngagementType,
+  type EngagementResult,
 } from "../lib/hubspot";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -264,6 +268,7 @@ interface DashData {
   pipelines: Pipeline[];
   account: AccountInfo;
   owners: HSOwner[];
+  engagements: Record<EngagementType, EngagementResult>;
 }
 
 function Dashboard({
@@ -297,7 +302,9 @@ function Dashboard({
       // Luego los dos paginados secuencial para no chocar contra el secondly limit
       const deals = await fetchDeals(token, from, to);
       const contacts = await fetchContacts(token, from, to);
-      setData({ account, pipelines, owners, deals, contacts });
+      // Engagements al final (resiliente: si faltan scopes, retorna error por tipo sin romper)
+      const engagements = await fetchAllEngagements(token, from, to);
+      setData({ account, pipelines, owners, deals, contacts, engagements });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Error al cargar datos";
       if (msg.includes("scopes") || msg.includes("scope")) {
@@ -463,6 +470,42 @@ function Dashboard({
       };
     })
     .sort((a, b) => b.pipelineValue - a.pipelineValue || b.totalDeals - a.totalDeals);
+
+  // Engagements (calls, emails, meetings, notes, tasks) por propietario
+  const ENGAGEMENT_TYPES: EngagementType[] = ["calls", "emails", "meetings", "notes", "tasks"];
+  const engagementsByOwner = new Map<string, Record<EngagementType, number>>();
+  const engagementTotals: Record<EngagementType, number> = {
+    calls: 0, emails: 0, meetings: 0, notes: 0, tasks: 0,
+  };
+  const engagementErrors: { type: EngagementType; error: string }[] = [];
+
+  if (data?.engagements) {
+    for (const type of ENGAGEMENT_TYPES) {
+      const result = data.engagements[type];
+      if (result.error) {
+        engagementErrors.push({ type, error: result.error });
+        continue;
+      }
+      for (const item of result.items) {
+        const ownerId = item.properties.hubspot_owner_id ?? "__unassigned__";
+        if (!engagementsByOwner.has(ownerId)) {
+          engagementsByOwner.set(ownerId, { calls: 0, emails: 0, meetings: 0, notes: 0, tasks: 0 });
+        }
+        engagementsByOwner.get(ownerId)![type] += 1;
+        engagementTotals[type] += 1;
+      }
+    }
+  }
+
+  const engagementRows = Array.from(engagementsByOwner.entries())
+    .map(([ownerId, counts]) => {
+      const name = ownerId === "__unassigned__" ? "Sin asignar" : (ownerMap.get(ownerId) ?? `ID ${ownerId}`);
+      const total = counts.calls + counts.emails + counts.meetings + counts.notes + counts.tasks;
+      return { id: ownerId, name, ...counts, total };
+    })
+    .sort((a, b) => b.total - a.total);
+  const engagementsGrandTotal =
+    engagementTotals.calls + engagementTotals.emails + engagementTotals.meetings + engagementTotals.notes + engagementTotals.tasks;
 
   // Recent deals table (top 10 by createdate)
   const recentDeals = [...deals]
@@ -871,6 +914,115 @@ function Dashboard({
                           </tr>
                         );
                       })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Engagements reales por propietario (calls, emails, meetings, notes, tasks) */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="px-7 py-5 border-b border-gray-50 flex items-end justify-between gap-4">
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900">Actividad real registrada por propietario</h3>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Llamadas, emails, reuniones, notas y tareas cargadas en HubSpot durante el período
+                  </p>
+                </div>
+                {engagementsGrandTotal > 0 && (
+                  <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">
+                    {fmtNum(engagementsGrandTotal)} actividades totales
+                  </span>
+                )}
+              </div>
+
+              {/* Aviso si faltan scopes */}
+              {engagementErrors.length > 0 && (
+                <div className="px-7 py-3 bg-amber-50/50 border-b border-amber-100">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                    <div className="text-xs text-amber-800">
+                      <p className="font-medium">
+                        Faltan scopes en tu Private App para ver: {engagementErrors.map((e) => ENGAGEMENT_LABELS[e.type]).join(", ")}
+                      </p>
+                      <p className="mt-1 text-amber-700">
+                        Agregá en HubSpot → Settings → Integraciones → Apps privadas → tu app → Alcances:{" "}
+                        <code className="bg-amber-100 px-1.5 py-0.5 rounded text-[11px] font-mono">
+                          {engagementErrors.map((e) => `crm.objects.${e.type}.read`).join(" · ")}
+                        </code>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50/50">
+                    <tr>
+                      <th className="text-left text-xs text-gray-500 font-semibold uppercase tracking-wider px-7 py-3.5">Propietario</th>
+                      <th className="text-right text-xs text-gray-500 font-semibold uppercase tracking-wider px-4 py-3.5">Llamadas</th>
+                      <th className="text-right text-xs text-gray-500 font-semibold uppercase tracking-wider px-4 py-3.5">Emails</th>
+                      <th className="text-right text-xs text-gray-500 font-semibold uppercase tracking-wider px-4 py-3.5">Reuniones</th>
+                      <th className="text-right text-xs text-gray-500 font-semibold uppercase tracking-wider px-4 py-3.5">Notas</th>
+                      <th className="text-right text-xs text-gray-500 font-semibold uppercase tracking-wider px-4 py-3.5">Tareas</th>
+                      <th className="text-right text-xs text-gray-500 font-semibold uppercase tracking-wider px-7 py-3.5">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {engagementRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="text-center text-gray-400 py-10 text-sm">
+                          {engagementErrors.length === ENGAGEMENT_TYPES.length
+                            ? "Sin acceso. Agregá los scopes de engagements a tu Private App."
+                            : "Sin actividad registrada en el período"}
+                        </td>
+                      </tr>
+                    ) : (
+                      <>
+                        {engagementRows.map((row, idx) => {
+                          const ownerColor = ["#FF7A59", "#00BDA5", "#516F90", "#F5C26B", "#6C4298", "#99ACC2"][idx % 6];
+                          return (
+                            <tr key={row.id} className="hover:bg-gray-50/50 transition">
+                              <td className="px-7 py-4">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div
+                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-semibold text-sm shrink-0"
+                                    style={{ background: row.id === "__unassigned__" ? "#9CA3AF" : ownerColor }}
+                                  >
+                                    {row.name.charAt(0).toUpperCase()}
+                                  </div>
+                                  <span className="font-medium text-gray-900 truncate">{row.name}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-4 text-right tabular-nums text-gray-700">{fmtNum(row.calls)}</td>
+                              <td className="px-4 py-4 text-right tabular-nums text-gray-700">{fmtNum(row.emails)}</td>
+                              <td className="px-4 py-4 text-right tabular-nums text-gray-700">{fmtNum(row.meetings)}</td>
+                              <td className="px-4 py-4 text-right tabular-nums text-gray-700">{fmtNum(row.notes)}</td>
+                              <td className="px-4 py-4 text-right tabular-nums text-gray-700">{fmtNum(row.tasks)}</td>
+                              <td className="px-7 py-4 text-right">
+                                <span className="inline-flex items-center justify-center min-w-[3rem] px-3 py-1 rounded-full text-xs font-bold tabular-nums bg-gray-100 text-gray-800">
+                                  {fmtNum(row.total)}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {/* Fila de totales */}
+                        <tr className="bg-gray-50/50 font-semibold">
+                          <td className="px-7 py-4 text-gray-700 text-sm">Total equipo</td>
+                          <td className="px-4 py-4 text-right tabular-nums text-gray-900">{fmtNum(engagementTotals.calls)}</td>
+                          <td className="px-4 py-4 text-right tabular-nums text-gray-900">{fmtNum(engagementTotals.emails)}</td>
+                          <td className="px-4 py-4 text-right tabular-nums text-gray-900">{fmtNum(engagementTotals.meetings)}</td>
+                          <td className="px-4 py-4 text-right tabular-nums text-gray-900">{fmtNum(engagementTotals.notes)}</td>
+                          <td className="px-4 py-4 text-right tabular-nums text-gray-900">{fmtNum(engagementTotals.tasks)}</td>
+                          <td className="px-7 py-4 text-right">
+                            <span className="inline-flex items-center justify-center min-w-[3rem] px-3 py-1 rounded-full text-xs font-bold tabular-nums text-white" style={{ background: "#FF7A59" }}>
+                              {fmtNum(engagementsGrandTotal)}
+                            </span>
+                          </td>
+                        </tr>
+                      </>
                     )}
                   </tbody>
                 </table>

@@ -96,6 +96,7 @@ async function searchAll<T>(
   object: string,
   properties: string[],
   filters: { propertyName: string; operator: string; value: string }[],
+  sortProperty: string = "createdate",
   maxRecords = 500
 ): Promise<T[]> {
   const results: T[] = [];
@@ -106,7 +107,7 @@ async function searchAll<T>(
       filterGroups: [{ filters }],
       properties,
       limit: 100,
-      sorts: [{ propertyName: "createdate", direction: "DESCENDING" }],
+      sorts: [{ propertyName: sortProperty, direction: "DESCENDING" }],
     };
     if (after) body.after = after;
 
@@ -172,4 +173,67 @@ export const SOURCE_LABELS: Record<string, string> = {
 export function sourceLabel(src: string | null): string {
   if (!src) return "Desconocida";
   return SOURCE_LABELS[src] ?? src;
+}
+
+// ─── Engagements (calls, emails, meetings, notes, tasks) ─────────────────────
+
+export type EngagementType = "calls" | "emails" | "meetings" | "notes" | "tasks";
+
+export const ENGAGEMENT_LABELS: Record<EngagementType, string> = {
+  calls: "Llamadas",
+  emails: "Emails",
+  meetings: "Reuniones",
+  notes: "Notas",
+  tasks: "Tareas",
+};
+
+export interface HSEngagement {
+  id: string;
+  properties: {
+    hubspot_owner_id: string | null;
+    hs_createdate: string | null;
+  };
+}
+
+export interface EngagementResult {
+  type: EngagementType;
+  items: HSEngagement[];
+  error?: string;
+}
+
+async function fetchEngagementType(
+  token: string,
+  type: EngagementType,
+  from: Date,
+  to: Date
+): Promise<EngagementResult> {
+  try {
+    const items = await searchAll<HSEngagement>(
+      token,
+      type,
+      ["hubspot_owner_id", "hs_createdate"],
+      [
+        { propertyName: "hs_createdate", operator: "GTE", value: from.getTime().toString() },
+        { propertyName: "hs_createdate", operator: "LTE", value: to.getTime().toString() },
+      ],
+      "hs_createdate",
+      2000 // max records — engagements suelen ser muchos más que deals/contactos
+    );
+    return { type, items };
+  } catch (e) {
+    return { type, items: [], error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export async function fetchAllEngagements(
+  token: string,
+  from: Date,
+  to: Date
+): Promise<Record<EngagementType, EngagementResult>> {
+  const types: EngagementType[] = ["calls", "emails", "meetings", "notes", "tasks"];
+  const out: Partial<Record<EngagementType, EngagementResult>> = {};
+  for (const t of types) {
+    out[t] = await fetchEngagementType(token, t, from, to);
+  }
+  return out as Record<EngagementType, EngagementResult>;
 }
